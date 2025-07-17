@@ -1,0 +1,15 @@
+mcp
+fastapi
+uvicorn
+openai
+pydantic
+requests
+aiohttp
+chainlit
+langchain
+langchain-core
+langchain-openai
+langgraph
+langgraph-supervisor
+google-api-python-client
+python-dotenv

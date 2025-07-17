@@ -1,0 +1,190 @@
+{
+  "P0100": {
+    "description": "Mass or Volume Air Flow Circuit Malfunction",
+    "causes": ["Faulty MAF sensor", "Wiring issues", "Air filter blockage"]
+  },
+  "P0101": {
+    "description": "Mass or Volume Air Flow Circuit Range/Performance Problem",
+    "causes": ["Dirty MAF sensor", "Intake leak", "Faulty wiring"]
+  },
+  "P0102": {
+    "description": "Mass or Volume Air Flow Circuit Low Input",
+    "causes": ["Low air flow", "Vacuum leak", "Faulty MAF sensor"]
+  },
+  "P0110": {
+    "description": "Intake Air Temperature Sensor Circuit Malfunction",
+    "causes": ["Faulty IAT sensor", "Wiring short", "Corroded connector"]
+  },
+  "P0113": {
+    "description": "Intake Air Temperature Sensor 1 Circuit High Input",
+    "causes": ["Disconnected sensor", "Open circuit", "Faulty sensor"]
+  },
+  "P0120": {
+    "description": "Throttle/Pedal Position Sensor A Circuit Malfunction",
+    "causes": ["Faulty throttle body", "Wiring issue", "Bad TPS sensor"]
+  },
+  "P0128": {
+    "description": "Coolant Thermostat (Coolant Temperature Below Thermostat Regulating Temperature)",
+    "causes": ["Stuck open thermostat", "Low coolant", "Faulty ECT sensor"]
+  },
+  "P0130": {
+    "description": "O2 Sensor Circuit (Bank 1, Sensor 1)",
+    "causes": ["O2 sensor failure", "Wiring issue", "Exhaust leak"]
+  },
+  "P0133": {
+    "description": "O2 Sensor Circuit Slow Response (Bank 1, Sensor 1)",
+    "causes": ["Contaminated sensor", "Wiring corrosion", "Fuel delivery issue"]
+  },
+  "P0141": {
+    "description": "O2 Sensor Heater Circuit Malfunction (Bank 1, Sensor 2)",
+    "causes": ["Blown fuse", "Wiring issue", "Faulty O2 sensor"]
+  },
+  "P0170": {
+    "description": "Fuel Trim Malfunction (Bank 1)",
+    "causes": ["Vacuum leak", "Fuel pressure issue", "MAF sensor problem"]
+  },
+  "P0171": {
+    "description": "System Too Lean (Bank 1)",
+    "causes": ["Vacuum leak", "Dirty MAF sensor", "Weak fuel pump"]
+  },
+  "P0172": {
+    "description": "System Too Rich (Bank 1)",
+    "causes": ["Leaky injectors", "Fuel pressure regulator", "MAF sensor"]
+  },
+  "P0300": {
+    "description": "Random/Multiple Cylinder Misfire Detected",
+    "causes": ["Bad spark plugs", "Ignition coil", "Fuel delivery problem"]
+  },
+  "P0301": {
+    "description": "Cylinder 1 Misfire Detected",
+    "causes": ["Bad spark plug", "Ignition coil", "Fuel injector"]
+  },
+  "P0302": {
+    "description": "Cylinder 2 Misfire Detected",
+    "causes": ["Spark plug failure", "Ignition coil", "Injector issue"]
+  },
+  "P0325": {
+    "description": "Knock Sensor 1 Circuit Malfunction (Bank 1)",
+    "causes": ["Knock sensor failure", "Short in wiring", "ECU issue"]
+  },
+  "P0335": {
+    "description": "Crankshaft Position Sensor A Circuit Malfunction",
+    "causes": ["Sensor failure", "Damaged tone ring", "Wiring fault"]
+  },
+  "P0340": {
+    "description": "Camshaft Position Sensor Circuit Malfunction",
+    "causes": ["Sensor failure", "Wiring short", "Timing issue"]
+  },
+  "P0401": {
+    "description": "Exhaust Gas Recirculation (EGR) Flow Insufficient",
+    "causes": ["Clogged EGR valve", "Vacuum leak", "Sensor malfunction"]
+  },
+  "P0420": {
+    "description": "Catalyst System Efficiency Below Threshold (Bank 1)",
+    "causes": ["Faulty catalytic converter", "O2 sensor issue", "Exhaust leak"]
+  },
+  "P0430": {
+    "description": "Catalyst System Efficiency Below Threshold (Bank 2)",
+    "causes": ["Faulty catalytic converter", "O2 sensor issue", "Exhaust leak"]
+  },
+  "P0440": {
+    "description": "Evaporative Emission Control System Malfunction",
+    "causes": ["Loose gas cap", "EVAP leak", "Purge valve issue"]
+  },
+  "P0442": {
+    "description": "Evaporative Emission Control System Leak Detected (small leak)",
+    "causes": ["Loose or bad gas cap", "Cracked hose", "Charcoal canister"]
+  },
+  "P0455": {
+    "description": "Evaporative Emission System Leak Detected (large leak)",
+    "causes": ["Loose gas cap", "Broken hose", "Faulty purge valve"]
+  },
+  "P0500": {
+    "description": "Vehicle Speed Sensor Malfunction",
+    "causes": ["VSS failure", "Wiring issue", "Corrosion"]
+  },
+  "P0505": {
+    "description": "Idle Control System Malfunction",
+    "causes": ["Dirty IAC valve", "Vacuum leak", "Wiring short"]
+  },
+  "P0601": {
+    "description": "Internal Control Module Memory Check Sum Error",
+    "causes": ["ECM failure", "Software glitch", "Battery/voltage issue"]
+  },
+  "P0700": {
+    "description": "Transmission Control System Malfunction",
+    "causes": ["TCM issue", "Wiring short", "Transmission sensor fault"]
+  },
+  "P0715": {
+    "description": "Input/Turbine Speed Sensor Circuit Malfunction",
+    "causes": ["Sensor failure", "Damaged wiring", "Transmission problem"]
+  },
+  "P0740": {
+    "description": "Torque Converter Clutch Circuit Malfunction",
+    "causes": ["Torque converter failure", "Solenoid issue", "Wiring"]
+  },
+  "P0750": {
+    "description": "Shift Solenoid A Malfunction",
+    "causes": ["Solenoid failure", "TCM fault", "Wiring"]
+  },
+  "P1121": {
+    "description": "Coolant Flow Control Valve Position Sensor Stuck",
+    "causes": ["Valve failure", "Sensor stuck", "Wiring issue"]
+  },
+  "P1135": {
+    "description": "Air/Fuel Sensor Heater Circuit Response (Bank 1 Sensor 1)",
+    "causes": ["O2 sensor heater failure", "Wiring issue", "ECU problem"]
+  },
+  "P1238": {
+    "description": "Fuel Pump Secondary Circuit Fault",
+    "causes": ["Fuel pump relay", "Wiring", "Fuel pump itself"]
+  },
+  "P1299": {
+    "description": "Cylinder Head Overtemperature Protection Active",
+    "causes": ["Engine overheating", "Coolant issue", "Thermostat stuck"]
+  },
+  "P1300": {
+    "description": "Igniter Circuit Malfunction",
+    "causes": ["Ignition coil failure", "Wiring short", "ECU problem"]
+  },
+  "P1336": {
+    "description": "Crankshaft/Camshaft Sensor Range/Performance",
+    "causes": ["Sensor misalignment", "Timing chain issue", "Bad sensor"]
+  },
+  "P1400": {
+    "description": "DPFE Sensor Circuit Low Voltage",
+    "causes": ["DPFE sensor failure", "Vacuum leak", "Exhaust blockage"]
+  },
+  "P1457": {
+    "description": "Evaporative Emissions System Leak Detected (EVAP Canister System)",
+    "causes": ["EVAP valve stuck", "Leak at canister", "Wiring"]
+  },
+  "P1604": {
+    "description": "Startability Malfunction",
+    "causes": ["Battery issue", "Starter motor", "Fuel delivery"]
+  },
+  "P1605": {
+    "description": "Rough Idle",
+    "causes": ["Idle air control valve", "Vacuum leak", "Fuel delivery"]
+  },
+  "P1700": {
+    "description": "Transmission Interlock Fault",
+    "causes": ["Shifter issue", "Wiring", "Transmission module"]
+  },
+  "P2002": {
+    "description": "Diesel Particulate Filter Efficiency Below Threshold (Bank 1)",
+    "causes": ["Clogged DPF", "Sensor failure", "Poor regeneration"]
+  },
+  "P2101": {
+    "description": "Throttle Actuator Control Motor Circuit Range/Performance",
+    "causes": ["Throttle body", "Motor failure", "Sensor issue"]
+  },
+  "P2195": {
+    "description": "O2 Sensor Signal Stuck Lean (Bank 1 Sensor 1)",
+    "causes": ["O2 sensor failure", "Vacuum leak", "Exhaust leak"]
+  },
+  "P2610": {
+    "description": "ECU/PCM Internal Engine Off Timer Performance",
+    "causes": ["ECU failure", "Battery drain", "Wiring"]
+  }
+}
