@@ -112,7 +112,7 @@ def get_obd_code_categories() -> str:
     return summary
 
 
-@tool(description="Search for YouTube repair tutorials and how-to videos for automotive problems. Use this tool when user asks 'how do I fix...' any car problem, after diagnosing OBD codes to find repair videos, when user wants DIY repair instructions, asks for video tutorials or guides, or mentions wanting to learn how to repair something. ALWAYS use this tool after analyzing OBD codes to provide repair guidance.")
+@tool(description="Search for YouTube repair tutorials and how-to videos for automotive problems. Use this tool when user asks 'how do I fix...' any car problem, after diagnosing OBD codes to find repair videos, when user wants DIY repair instructions, asks for video tutorials or guides, or mentions wanting to learn how to repair something. ALWAYS use this tool after analyzing OBD codes to provide repair guidance. If no relevant videos are found, it will inform the user honestly.")
 def search_youtube_car_tutorials(query: str) -> str:
     """Search for YouTube repair tutorials and how-to videos for automotive problems."""
     try:
@@ -129,29 +129,53 @@ def search_youtube_car_tutorials(query: str) -> str:
         search_response = youtube.search().list(
             q=search_query,
             part='id,snippet',
-            maxResults=5,
+            maxResults=10,  # Get more results to filter better
             type='video',
             order='relevance',
             videoDuration='medium'  # Focus on medium-length tutorials
         ).execute()
         
         if not search_response.get('items'):
-            return f"No YouTube tutorials found for: {query}"
+            return f"**I could not find any YouTube tutorials for: {query}**\n\n❌ **No relevant repair videos found** - The YouTube search returned no results for this automotive issue.\n\n**Alternative suggestions:**\n• Try searching manually on YouTube with more specific terms\n• Check manufacturer-specific repair channels\n• Consult professional repair documentation\n• Consider seeking help from a qualified mechanic"
         
-        results = []
+        # Filter for automotive-related content - Make filtering less restrictive
+        automotive_keywords = ['car', 'auto', 'repair', 'fix', 'diagnostic', 'obd', 'engine', 'vehicle', 'mechanic', 'garage', 'toyota', 'ford', 'honda', 'chevrolet', 'bmw', 'mercedes', 'audi', 'volkswagen', 'nissan', 'hyundai', 'kia', 'mazda', 'subaru', 'maintenance', 'service', 'problem', 'issue', 'diy', 'tutorial', 'how', 'code', 'trouble']
+        
+        relevant_results = []
+        all_results = []  # Store all results as backup
+        
         for item in search_response['items']:
-            title = item['snippet']['title']
+            title = item['snippet']['title'].lower()
+            description = item['snippet']['description'].lower()
+            
+            title_display = item['snippet']['title']
             channel = item['snippet']['channelTitle']
             video_id = item['id']['videoId']
             url = f"https://www.youtube.com/watch?v={video_id}"
-            description = item['snippet']['description'][:100] + "..."
+            description_snippet = item['snippet']['description'][:100] + "..." if item['snippet']['description'] else "No description available"
             
-            results.append(f"**{title}**\nChannel: {channel}\nURL: {url}\nDescription: {description}\n")
+            video_info = f"**{title_display}**\nChannel: {channel}\nURL: {url}\nDescription: {description_snippet}\n"
+            all_results.append(video_info)
+            
+            # Check if the video is likely automotive-related
+            if any(keyword in title or keyword in description for keyword in automotive_keywords):
+                relevant_results.append(video_info)
         
-        return f"Found {len(results)} YouTube tutorials for '{query}':\n\n" + "\n".join(results)
+        # If no automotive-specific results found, use all results but with a note
+        if not relevant_results and all_results:
+            display_results = all_results[:5]
+            return f"**⚠️ Limited relevant content found for: {query}**\n\nI found {len(display_results)} YouTube tutorials, but they may not be specifically automotive-related:\n\n" + "\n".join(display_results) + "\n\n**❌ Note**: These videos may not be specifically automotive-related. I could not find videos that clearly match automotive repair content. Please review carefully or try more specific search terms."
+        
+        if not relevant_results:
+            return f"**❌ I could not find relevant automotive tutorials for: {query}**\n\n**No automotive-specific content found** - While some videos were found in the search, none appeared to be specifically related to automotive repair.\n\n**Alternative suggestions:**\n• Try more specific search terms (include car make/model)\n• Look for manufacturer-specific repair guides\n• Consult a professional mechanic for this issue\n• Search manually on YouTube with different keywords"
+        
+        # Limit to top 5 relevant results
+        display_results = relevant_results[:5]
+        
+        return f"Found {len(display_results)} relevant YouTube tutorials for '{query}':\n\n" + "\n".join(display_results)
         
     except Exception as e:
-        return f"Error searching YouTube: {str(e)}"
+        return f"**❌ Error searching YouTube for repair videos**\n\nI encountered an error while trying to find YouTube tutorials: {str(e)}\n\n**I was unable to retrieve repair videos at this time.** Please try:\n• Searching YouTube manually\n• Checking back later\n• Consulting professional repair resources"
 
 
 @tool(description="Find nearby auto repair garages with ratings, contact info, and business details using Google Maps. Use this tool when user asks for garages, mechanics, or auto repair shops near them, needs professional help after diagnosing codes, mentions a location and wants local services, asks 'where can I get this fixed?' or 'find a mechanic near me', or provides location like city, zip code, or address. ALWAYS use this tool when users need professional automotive services.")
@@ -214,12 +238,12 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
         response = requests.get(base_url, params=params)
         
         if response.status_code != 200:
-            return f"Error accessing Google Places API: {response.status_code}"
+            return f"**❌ Error accessing Google Places API**: Status code {response.status_code}\n\n**I was unable to search for nearby garages** due to an API error. Please try:\n• Searching Google Maps directly for 'auto repair near {location}'\n• Using a different location format\n• Trying again later"
         
         data = response.json()
         
         if data['status'] != 'OK' or not data.get('results'):
-            return f"No auto repair shops found near {location}. Try a different location or check spelling."
+            return f"**❌ No auto repair shops found near {location}**\n\n**I could not find any garages in this area.** This could be because:\n• The location name might need to be more specific\n• There may be limited auto repair shops in this area\n• The location might not be recognized\n\n**Please try:**\n• Using a more specific address or zip code\n• Searching a nearby larger city\n• Checking Google Maps directly for 'auto repair near {location}'"
         
         # Format the results
         result_text = f"🏪 **Auto Repair Shops Near {location}:**\n\n"
@@ -246,9 +270,28 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
             place_id = place.get('place_id')
             details = get_place_details(place_id, api_key) if place_id else {}
             
+            # Create Google Maps link - multiple fallback options
+            maps_link = None
+            lat = place.get('geometry', {}).get('location', {}).get('lat')
+            lng = place.get('geometry', {}).get('location', {}).get('lng')
+            
+            if place_id:
+                maps_link = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+            elif lat and lng:
+                maps_link = f"https://www.google.com/maps?q={lat},{lng}"
+            elif address:
+                # Fallback: use address for search
+                encoded_address = address.replace(' ', '+').replace(',', '%2C')
+                maps_link = f"https://www.google.com/maps/search/{encoded_address}"
+            
             result_text += f"**{i+1}. {name}** {status_icon}\n"
             result_text += f"📍 Address: {address}\n"
             result_text += f"⭐ Rating: {rating_display}\n"
+            
+            if maps_link:
+                result_text += f"🗺️ Google Maps: {maps_link}\n"
+            else:
+                result_text += f"🗺️ Google Maps: ❌ **Link unavailable** - Please search manually for '{name}' near {location}\n"
             
             if details.get('phone'):
                 result_text += f"📞 Phone: {details['phone']}\n"
@@ -256,8 +299,12 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
             if details.get('website'):
                 result_text += f"🌐 Website: {details['website']}\n"
             
-            if details.get('opening_hours'):
-                result_text += f"🕒 Hours: {details['opening_hours']}\n"
+            # Fix opening_hours handling
+            opening_hours = details.get('opening_hours')
+            if opening_hours and isinstance(opening_hours, list) and opening_hours:
+                # Show only today's hours or first available
+                hours_text = opening_hours[0] if opening_hours else "Hours not available"
+                result_text += f"🕒 Hours: {hours_text}\n"
             
             result_text += "\n"
         
@@ -273,7 +320,7 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
         return result_text
         
     except Exception as e:
-        return f"Error finding garages: {str(e)}\n\nPlease try searching Google Maps directly for 'auto repair near {location}'"
+        return f"**❌ Error finding garages**: {str(e)}\n\n**I was unable to search for nearby auto repair shops** due to an error. Please try:\n• Searching Google Maps directly for 'auto repair near {location}'\n• Using a different location format\n• Checking your internet connection\n• Trying again later"
 
 
 def get_place_details(place_id: str, api_key: str) -> dict:
@@ -287,6 +334,9 @@ def get_place_details(place_id: str, api_key: str) -> dict:
     Returns:
         Dictionary with place details
     """
+    if not place_id or not api_key:
+        return {}
+        
     try:
         url = "https://maps.googleapis.com/maps/api/place/details/json"
         params = {
@@ -295,21 +345,27 @@ def get_place_details(place_id: str, api_key: str) -> dict:
             'fields': 'formatted_phone_number,website,opening_hours'
         }
         
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=5)
         
         if response.status_code == 200:
             data = response.json()
-            if data['status'] == 'OK':
+            if data.get('status') == 'OK':
                 result = data.get('result', {})
+                
+                # Handle opening hours more safely
+                opening_hours_data = result.get('opening_hours', {})
+                weekday_text = opening_hours_data.get('weekday_text', []) if isinstance(opening_hours_data, dict) else []
+                
                 return {
                     'phone': result.get('formatted_phone_number'),
                     'website': result.get('website'),
-                    'opening_hours': result.get('opening_hours', {}).get('weekday_text', [])
+                    'opening_hours': weekday_text
                 }
         
         return {}
         
     except Exception:
+        # Silently fail and return empty dict to not break the main function
         return {}
 
 
