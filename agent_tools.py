@@ -270,28 +270,44 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
             place_id = place.get('place_id')
             details = get_place_details(place_id, api_key) if place_id else {}
             
-            # Create Google Maps link - multiple fallback options
+            # Create Google Maps link - Force full URLs, avoid shortened links
             maps_link = None
             lat = place.get('geometry', {}).get('location', {}).get('lat')
             lng = place.get('geometry', {}).get('location', {}).get('lng')
             
-            if place_id:
+            # Force full Google Maps URLs (avoid shortened goo.gl links)
+            if lat and lng:
+                # Use direct coordinates URL (most reliable, always full URL)
+                maps_link = f"https://www.google.com/maps/@{lat},{lng},15z"
+            elif place_id:
+                # Use place_id in search format (avoids shortened URLs)
                 maps_link = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
-            elif lat and lng:
-                maps_link = f"https://www.google.com/maps?q={lat},{lng}"
             elif address:
-                # Fallback: use address for search
-                encoded_address = address.replace(' ', '+').replace(',', '%2C')
+                # Use address search format with proper encoding
+                import urllib.parse
+                encoded_address = urllib.parse.quote_plus(address)
                 maps_link = f"https://www.google.com/maps/search/{encoded_address}"
+            
+            # Additional fallback: create a direct search URL
+            if not maps_link and name:
+                import urllib.parse
+                search_query = f"{name} {location if location else ''}"
+                encoded_query = urllib.parse.quote_plus(search_query.strip())
+                maps_link = f"https://www.google.com/maps/search/{encoded_query}"
             
             result_text += f"**{i+1}. {name}** {status_icon}\n"
             result_text += f"📍 Address: {address}\n"
             result_text += f"⭐ Rating: {rating_display}\n"
             
+            # Google Maps link should always be available now - Force full URLs
             if maps_link:
                 result_text += f"🗺️ Google Maps: {maps_link}\n"
             else:
-                result_text += f"🗺️ Google Maps: ❌ **Link unavailable** - Please search manually for '{name}' near {location}\n"
+                # Final fallback with direct search URL (never use shortened links)
+                import urllib.parse
+                fallback_query = urllib.parse.quote_plus(f"{name} auto repair")
+                fallback_link = f"https://www.google.com/maps/search/{fallback_query}"
+                result_text += f"🗺️ Google Maps: {fallback_link}\n"
             
             if details.get('phone'):
                 result_text += f"📞 Phone: {details['phone']}\n"
