@@ -54,6 +54,65 @@ edit_message = true
     # Sample rate of the audio
     sample_rate = 24000
 
+[features.speech_to_text]
+    # Enable voice input
+    enabled = true
+    # Use Whisper model for transcription - whisper-1 is the OpenAI API version with better noise handling
+    whisper_model = "whisper-1"
+    
+    # Voice activity detection settings - optimized for background noise reduction
+    [features.speech_to_text.vad]
+    # The threshold above which the VAD will consider the audio as speech
+    # Higher values (0.4-0.6) require louder speech but better filter out background noise
+    threshold = 0.5
+    # The amount of silence in milliseconds that needs to pass before considering the speech as complete
+    # Shorter values stop recording earlier when noise is detected
+    auto_stop = 1000
+    # The maximum time in milliseconds to record audio (regardless of speech detection)
+    max_record_time = 15000
+    # Noise suppression level (0 to 1, where 1 is maximum suppression)
+    noise_suppression = 0.9
+    
+    # Advanced settings
+    [features.speech_to_text.advanced]
+    # Enhanced noise reduction (works with standard Whisper)
+    enhanced_noise_reduction = true
+    # Focus on human voice frequencies (300-3000 Hz)
+    voice_focus = true
+    # Apply amplitude filtering for background noise
+    amplitude_filtering = true
+    # Threshold for amplitude filtering (lower values = more filtering)
+    amplitude_threshold = 500
+    # Dynamically adjust noise threshold based on environment
+    dynamic_threshold = true
+    # Apply strict VAD filtering that requires clearer speech
+    strict_vad_filtering = true
+    # Suppress ambient noise (fans, AC units, computer fans)
+    ambient_noise_suppression = true
+    # Normalize audio to improve recognition in noisy environments
+    normalize_audio = true
+    # Maximum amplitude filtering - ignores sounds below threshold
+    max_amplitude_filtering = true
+    
+    # Realtime OpenAI speech configuration
+    [features.speech_to_text.realtime]
+    # Enable realtime OpenAI speech capabilities
+    enabled = true
+
+[features.text_to_speech]
+    # Enable text-to-speech functionality
+    enabled = true
+    # Use OpenAI's TTS model for high-quality voice synthesis
+    tts_model = "tts-1"
+    # Voice to use for speech synthesis (alloy, echo, fable, onyx, nova, shimmer)
+    voice = "alloy"
+    # Speed of speech (0.25 to 4.0, where 1.0 is normal speed)
+    speed = 1.0
+    # Auto-play audio responses when they're generated
+    auto_play = true
+    # Sample rate for audio output
+    sample_rate = 24000
+
 [features.mcp.sse]
     enabled = true
 

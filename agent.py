@@ -150,6 +150,7 @@ async def lifespan(app: FastAPI):
         "AZURE_OPENAI_ENDPOINT",
         "AZURE_OPENAI_API_KEY", 
         "OPENAI_API_VERSION",
+        "REALTIME_OPENAI_API_KEY",
         "YOUTUBE_API_KEY",
         "GOOGLE_MAPS_API_KEY",
         "GOOGLE_SEARCH_API_KEY",

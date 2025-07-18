@@ -13,3 +13,6 @@ langgraph
 langgraph-supervisor
 google-api-python-client
 python-dotenv
+# Specific versions for realtime speech handling
+websockets==14.1
+python-socketio==5.11.2
