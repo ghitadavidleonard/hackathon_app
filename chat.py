@@ -1,5 +1,8 @@
 import os
 import asyncio
+import re
+import json
+from pathlib import Path
 from openai import AsyncOpenAI
 
 import chainlit as cl
@@ -62,15 +65,17 @@ Be conversational, helpful, and thorough in your responses. Ask clarifying quest
                 )
             if "transcript" in delta:
                 transcript = delta["transcript"]  # string, transcript added
-                pass
+                logger.info(f"Transcript delta: {transcript}")
             if "arguments" in delta:
                 arguments = delta["arguments"]  # string, function arguments added
-                pass
+                logger.info(f"Function arguments delta: {arguments}")
 
     async def handle_item_completed(item):
         """Used to populate the chat context with transcription once an item is completed."""
-        # Could be used to save conversation history
-        pass
+        # Log completed items for debugging
+        if item:
+            item_type = item.get("type", "unknown")
+            logger.info(f"Item completed: type={item_type}")
 
     async def handle_conversation_interrupt(event):
         """Used to cancel the client previous audio playback."""
@@ -79,6 +84,11 @@ Be conversational, helpful, and thorough in your responses. Ask clarifying quest
 
     async def handle_error(event):
         logger.error(f"Realtime API error: {event}")
+        # Send user-friendly error message
+        await cl.ErrorMessage(
+            content="🔧 **Voice Mode Issue**: Connection problem occurred.\n\n"
+            "You can still use text mode by typing your DTC questions directly."
+        ).send()
 
     openai_realtime.on("conversation.updated", handle_conversation_updated)
     openai_realtime.on("conversation.item.completed", handle_item_completed)
@@ -89,11 +99,18 @@ Be conversational, helpful, and thorough in your responses. Ask clarifying quest
     await openai_realtime.update_session(instructions=instructions)
 
     cl.user_session.set("openai_realtime", openai_realtime)
-    coros = [
-        openai_realtime.add_tool(tool_def, tool_handler)
-        for tool_def, tool_handler in tools
-    ]
-    await asyncio.gather(*coros)
+
+    # Add tools with improved error handling
+    try:
+        coros = [
+            openai_realtime.add_tool(tool_def, tool_handler)
+            for tool_def, tool_handler in tools
+        ]
+        await asyncio.gather(*coros)
+        logger.info(f"Successfully added {len(tools)} DTC diagnostic tools")
+    except Exception as e:
+        logger.error(f"Error adding tools to realtime client: {e}")
+        raise
 
 
 async def handle_text_message(message_content: str):
@@ -139,16 +156,19 @@ async def start():
         "I'm here to help you diagnose automotive problems and analyze DTC codes.\n\n"
         "**How to use me:**\n"
         "- **Voice mode**: Press `P` to talk (recommended for detailed explanations)\n"
-        "- **Text mode**: Type your message (works immediately)\n\n"
+        "- **Text mode**: Type your message (works immediately)\n"
+        "- **File uploads**: Upload diagnostic reports, scanner outputs, or text files with OBD codes\n\n"
         "**I can help with:**\n"
         "- Looking up specific DTC codes (P0301, P0420, etc.)\n"
         "- Analyzing symptoms and finding related codes\n"
         "- Providing causes and solutions for car problems\n"
-        "- Offering repair guidance and next steps\n\n"
-        "Try saying or typing something like:\n"
+        "- Offering repair guidance and next steps\n"
+        "- Processing uploaded diagnostic files\n\n"
+        "Try saying, typing, or uploading something like:\n"
         '- "What does code P0301 mean?"\n'
         '- "My car has a rough idle"\n'
-        '- "I\'m getting codes P0420 and P0171"'
+        '- "I\'m getting codes P0420 and P0171"\n'
+        "- Upload a .txt file with diagnostic scanner output"
     ).send()
     await setup_openai_realtime()
 
@@ -157,11 +177,55 @@ async def start():
 async def on_message(message: cl.Message):
     openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
 
+    # Enhanced file processing capabilities
+    file_content = ""
+    files_processed = 0
+
+    if message.elements:
+        await cl.Message(content="🔍 **Processing uploaded files...**").send()
+
+        for element in message.elements:
+            if hasattr(element, "path") and element.path:
+                files_processed += 1
+
+                # Extract text from uploaded file
+                extracted_text = extract_text_from_file(element.path, element.name)
+
+                # Find OBD codes in the file
+                found_codes = find_obd_codes_in_text(extracted_text)
+
+                if found_codes:
+                    file_content += f"\n\n📁 **File Analysis - {element.name}:**\n"
+                    file_content += f"✅ Found {len(found_codes)} OBD codes: {', '.join(found_codes)}\n"
+                    file_content += f"📄 File content excerpt:\n```\n{extracted_text[:500]}{'...' if len(extracted_text) > 500 else ''}\n```\n"
+
+                    # Show immediate feedback to user
+                    await cl.Message(
+                        content=f"✅ **{element.name}** - Found {len(found_codes)} OBD codes: {', '.join(found_codes)}"
+                    ).send()
+                else:
+                    file_content += f"\n\n📁 **File Analysis - {element.name}:**\n"
+                    file_content += f"❌ No OBD codes found in this file.\n"
+                    file_content += f"📄 File content excerpt:\n```\n{extracted_text[:500]}{'...' if len(extracted_text) > 500 else ''}\n```\n"
+
+                    # Show feedback for files without codes
+                    await cl.Message(
+                        content=f"❌ **{element.name}** - No OBD codes detected. Content preview: {extracted_text[:100]}..."
+                    ).send()
+
+    # Combine message content with file analysis
+    combined_query = message.content
+    if file_content:
+        combined_query += file_content
+        await cl.Message(
+            content=f"🔧 **Starting diagnostic analysis for {files_processed} file(s)...**"
+        ).send()
+
     # Check if realtime is connected (voice mode active)
     if openai_realtime and openai_realtime.is_connected():
         # Send to realtime for voice mode
         await openai_realtime.send_user_message_content(
-            [{"type": "input_text", "text": message.content}]
+            [{"type": "input_text", "text": combined_query}]
         )
     else:
         # Handle as text message using existing tools
@@ -172,7 +236,7 @@ async def on_message(message: cl.Message):
             await msg.stream_token("🔍 Analyzing your message...")
 
             # Process with DTC diagnostic tools
-            result = await handle_text_message(message.content)
+            result = await handle_text_message(combined_query)
 
             # Clear the typing indicator and send result
             msg.content = ""
@@ -198,7 +262,8 @@ async def on_audio_start():
 
         # Send a welcome message for voice mode
         await cl.Message(
-            content="🎙️ **Voice mode activated!** I'm ready to help with your automotive diagnostics. You can now speak your questions or describe your car problems."
+            content="🎙️ **Voice mode activated!** I'm ready to help with your automotive diagnostics.\n\n"
+            "I have access to comprehensive DTC diagnostic tools. You can now speak your questions or describe your car problems."
         ).send()
 
         return True
@@ -230,3 +295,73 @@ async def on_end():
     if openai_realtime and openai_realtime.is_connected():
         await openai_realtime.disconnect()
         logger.info("Disconnected from OpenAI realtime")
+
+
+def extract_text_from_file(file_path: str, file_name: str) -> str:
+    """Extract text content from uploaded files."""
+    try:
+        file_extension = Path(file_name).suffix.lower()
+
+        # Handle different file types
+        if file_extension in [".txt", ".log", ".csv", ".dat", ".out"]:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+                return content
+        elif file_extension == ".json":
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return json.dumps(data, indent=2)
+        elif file_extension in [".xml", ".html", ".htm"]:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+                # Basic text extraction from XML/HTML (remove tags)
+                clean_text = re.sub(r"<[^>]+>", " ", content)
+                return clean_text
+        elif file_extension in [".pdf"]:
+            # For PDF files, return a message indicating the limitation
+            return f"PDF file detected: {file_name}. Please convert to text format or copy/paste the OBD codes directly."
+        else:
+            # Try to read as text anyway for unknown extensions
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+                # Check if content looks like text
+                if len(content) > 0 and content.isprintable():
+                    return content
+                else:
+                    return f"Binary or unreadable file: {file_name}. Please upload text-based diagnostic files."
+    except UnicodeDecodeError:
+        return f"Unable to read file {file_name}: appears to be binary or uses unsupported encoding."
+    except json.JSONDecodeError:
+        return f"Invalid JSON file: {file_name}. Please check file format."
+    except Exception as e:
+        return f"Error reading file {file_name}: {str(e)}"
+
+
+def find_obd_codes_in_text(text: str) -> list:
+    """Find OBD codes in text using regex with enhanced detection."""
+    codes = []
+
+    # Primary pattern: Standard OBD codes (P, B, C, U followed by 4 digits)
+    pattern_standard = r"\b[PBCU]\d{4}\b"
+    standard_codes = re.findall(pattern_standard, text.upper())
+    codes.extend(standard_codes)
+
+    # Secondary pattern: Codes with dashes or spaces (P0301, P-0301, P 0301)
+    pattern_separated = r"\b[PBCU][-\s]?\d{4}\b"
+    separated_codes = re.findall(pattern_separated, text.upper())
+    # Clean up the separated codes
+    for code in separated_codes:
+        clean_code = re.sub(r"[-\s]", "", code)
+        if clean_code not in codes:
+            codes.append(clean_code)
+
+    # Tertiary pattern: Look for "code" or "DTC" followed by OBD code
+    pattern_keyword = r"(?:code|dtc|error)[\s:]*([PBCU][-\s]?\d{4})"
+    keyword_matches = re.findall(pattern_keyword, text.upper(), re.IGNORECASE)
+    for match in keyword_matches:
+        clean_code = re.sub(r"[-\s]", "", match)
+        if clean_code not in codes:
+            codes.append(clean_code)
+
+    # Remove duplicates and return
+    return list(set(codes))
