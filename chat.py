@@ -13,9 +13,9 @@ from realtime.tools import tools
 import aiohttp
 from agent_tools import (
     lookup_obd_code,
-    extract_and_analyze_obd_codes, 
+    extract_and_analyze_obd_codes,
     search_obd_codes_by_keyword,
-    detect_obd_codes_in_message
+    detect_obd_codes_in_message,
 )
 
 client = AsyncOpenAI()
@@ -110,8 +110,11 @@ async def handle_text_message(message_content: str):
             if "No OBD codes found" in result:
                 # Fallback to your existing API if no OBD codes found
                 api_url = "http://localhost:8005/ask"
-                prompt = {"query": message_content, "history": cl.chat_context.to_openai()}
-                
+                prompt = {
+                    "query": message_content,
+                    "history": cl.chat_context.to_openai(),
+                }
+
                 response_text = ""
                 async with aiohttp.ClientSession() as session:
                     async with session.post(api_url, json=prompt) as r:
@@ -120,7 +123,7 @@ async def handle_text_message(message_content: str):
                                 response_text += data.decode()
                         else:
                             response_text = "I'm here to help with automotive diagnostics. Please describe your car problem or provide any error codes you're seeing."
-                
+
                 return response_text
             else:
                 return result
@@ -133,19 +136,19 @@ async def handle_text_message(message_content: str):
 async def start():
     await cl.Message(
         content="🚗 **Welcome to your DTC Diagnostic Assistant!**\n\n"
-                "I'm here to help you diagnose automotive problems and analyze DTC codes.\n\n"
-                "**How to use me:**\n"
-                "- **Voice mode**: Press `P` to talk (recommended for detailed explanations)\n"
-                "- **Text mode**: Type your message (works immediately)\n\n"
-                "**I can help with:**\n"
-                "- Looking up specific DTC codes (P0301, P0420, etc.)\n"
-                "- Analyzing symptoms and finding related codes\n"
-                "- Providing causes and solutions for car problems\n"
-                "- Offering repair guidance and next steps\n\n"
-                "Try saying or typing something like:\n"
-                "- \"What does code P0301 mean?\"\n"
-                "- \"My car has a rough idle\"\n"
-                "- \"I'm getting codes P0420 and P0171\""
+        "I'm here to help you diagnose automotive problems and analyze DTC codes.\n\n"
+        "**How to use me:**\n"
+        "- **Voice mode**: Press `P` to talk (recommended for detailed explanations)\n"
+        "- **Text mode**: Type your message (works immediately)\n\n"
+        "**I can help with:**\n"
+        "- Looking up specific DTC codes (P0301, P0420, etc.)\n"
+        "- Analyzing symptoms and finding related codes\n"
+        "- Providing causes and solutions for car problems\n"
+        "- Offering repair guidance and next steps\n\n"
+        "Try saying or typing something like:\n"
+        '- "What does code P0301 mean?"\n'
+        '- "My car has a rough idle"\n'
+        '- "I\'m getting codes P0420 and P0171"'
     ).send()
     await setup_openai_realtime()
 
@@ -153,7 +156,7 @@ async def start():
 @cl.on_message
 async def on_message(message: cl.Message):
     openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
-    
+
     # Check if realtime is connected (voice mode active)
     if openai_realtime and openai_realtime.is_connected():
         # Send to realtime for voice mode
@@ -163,27 +166,25 @@ async def on_message(message: cl.Message):
     else:
         # Handle as text message using existing tools
         msg = cl.Message(content="")
-        
+
         try:
             # Show typing indicator
             await msg.stream_token("🔍 Analyzing your message...")
-            
+
             # Process with DTC diagnostic tools
             result = await handle_text_message(message.content)
-            
+
             # Clear the typing indicator and send result
             msg.content = ""
             await msg.stream_token(result)
             await msg.send()
-            
+
         except Exception as e:
             logger.error(f"Error processing message: {e}")
-            elements = [
-                cl.Text(name="Error", content=f"Error: {e}", display="inline")
-            ]
+            elements = [cl.Text(name="Error", content=f"Error: {e}", display="inline")]
             await cl.Message(
                 content="I encountered an issue processing your request. Please try again or describe your car problem differently.",
-                elements=elements
+                elements=elements,
             ).send()
 
 
@@ -194,18 +195,18 @@ async def on_audio_start():
         openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
         await openai_realtime.connect()
         logger.info("Connected to OpenAI realtime")
-        
+
         # Send a welcome message for voice mode
         await cl.Message(
             content="🎙️ **Voice mode activated!** I'm ready to help with your automotive diagnostics. You can now speak your questions or describe your car problems."
         ).send()
-        
+
         return True
     except Exception as e:
         logger.error(f"Failed to connect to OpenAI realtime: {e}")
         await cl.ErrorMessage(
             content=f"Failed to connect to voice mode: {e}\n\n"
-                   "Don't worry! You can still use text mode by typing your questions."
+            "Don't worry! You can still use text mode by typing your questions."
         ).send()
         return False
 

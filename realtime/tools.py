@@ -26,6 +26,7 @@ lookup_dtc_code_def = {
     },
 }
 
+
 async def lookup_dtc_code_handler(code):
     """Look up detailed information about a specific DTC code."""
     try:
@@ -36,12 +37,13 @@ async def lookup_dtc_code_handler(code):
                 "description": result["description"],
                 "causes": result.get("causes", []),
                 "solutions": result.get("solutions", []),
-                "found": True
+                "found": True,
             }
         else:
             return {"error": f"DTC code {code} not found in database", "found": False}
     except Exception as e:
         return {"error": str(e), "found": False}
+
 
 lookup_dtc_code = (lookup_dtc_code_def, lookup_dtc_code_handler)
 
@@ -61,6 +63,7 @@ extract_dtc_codes_def = {
     },
 }
 
+
 async def extract_dtc_codes_handler(text):
     """Extract and analyze all DTC codes found in text."""
     try:
@@ -70,17 +73,23 @@ async def extract_dtc_codes_handler(text):
             for code in result:
                 code_info = _obd_handler.lookup_obd_code(code)
                 if code_info.get("found"):
-                    analysis.append({
-                        "code": code,
-                        "description": code_info["description"],
-                        "causes": code_info.get("causes", []),
-                        "solutions": code_info.get("solutions", [])
-                    })
+                    analysis.append(
+                        {
+                            "code": code,
+                            "description": code_info["description"],
+                            "causes": code_info.get("causes", []),
+                            "solutions": code_info.get("solutions", []),
+                        }
+                    )
             return {"codes_found": result, "analysis": analysis}
         else:
-            return {"error": "No DTC codes found in the provided text", "codes_found": []}
+            return {
+                "error": "No DTC codes found in the provided text",
+                "codes_found": [],
+            }
     except Exception as e:
         return {"error": str(e), "codes_found": []}
+
 
 extract_dtc_codes = (extract_dtc_codes_def, extract_dtc_codes_handler)
 
@@ -100,6 +109,7 @@ search_dtc_by_symptoms_def = {
     },
 }
 
+
 async def search_dtc_by_symptoms_handler(symptoms):
     """Search for DTC codes by symptoms or keywords."""
     try:
@@ -107,9 +117,13 @@ async def search_dtc_by_symptoms_handler(symptoms):
         if result:
             return {"matches": result, "found": True}
         else:
-            return {"error": f"No DTC codes found matching symptoms: {symptoms}", "found": False}
+            return {
+                "error": f"No DTC codes found matching symptoms: {symptoms}",
+                "found": False,
+            }
     except Exception as e:
         return {"error": str(e), "found": False}
+
 
 search_dtc_by_symptoms = (search_dtc_by_symptoms_def, search_dtc_by_symptoms_handler)
 
