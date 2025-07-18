@@ -20,79 +20,50 @@ from googleapiclient.discovery import build
 _obd_handler = OBDCodeHandler()
 
 
-def expand_shortened_url(url: str) -> str:
-    """
-    Expand shortened URLs and validate they work properly.
-    
-    Args:
-        url: URL that might be shortened
-        
-    Returns:
-        Expanded URL or original URL if expansion fails
-    """
-    if not url:
-        return url
-        
-    try:
-        # Check if URL looks like it might be shortened
-        shortened_patterns = [
-            'youtu.be/', 'bit.ly/', 'tinyurl.com/', 'goo.gl/',
-            't.co/', 'ow.ly/', 'is.gd/', 'buff.ly/'
-        ]
-        
-        is_shortened = any(pattern in url.lower() for pattern in shortened_patterns)
-        
-        if is_shortened or len(url) < 50:  # Very short URLs might be shortened
-            # Try to expand by following redirects
-            response = requests.head(url, allow_redirects=True, timeout=5)
-            if response.status_code < 400:
-                expanded_url = response.url
-                return expanded_url
-        
-        return url
-        
-    except Exception:
-        # If expansion fails, return original URL
-        return url
-
-
 def validate_and_format_url(url: str, title: str = "") -> str:
     """
-    Validate URL and format it properly for display.
+    Validate URL and format it properly for display - ALWAYS returns full URLs, never shortened.
     
     Args:
         url: URL to validate and format
         title: Optional title for the link
         
     Returns:
-        Formatted URL string
+        Formatted URL string with full URL guaranteed
     """
     if not url:
         return "❌ No URL available"
     
     try:
-        # Expand if shortened
-        expanded_url = expand_shortened_url(url)
+        # Start with the original URL - DO NOT expand shortened URLs to avoid new shortening
+        final_url = url
         
         # Ensure URL has proper protocol
-        if not expanded_url.startswith(('http://', 'https://')):
-            expanded_url = 'https://' + expanded_url
+        if not final_url.startswith(('http://', 'https://')):
+            final_url = 'https://' + final_url
         
-        # Special handling for YouTube URLs to ensure they're full
-        if 'youtube.com' in expanded_url or 'youtu.be' in expanded_url:
+        # Special handling for YouTube URLs to ensure they're full format
+        if 'youtube.com' in final_url or 'youtu.be' in final_url:
             # Convert youtu.be to full youtube.com format
-            if 'youtu.be/' in expanded_url:
-                video_id = expanded_url.split('youtu.be/')[-1].split('?')[0]
-                expanded_url = f"https://www.youtube.com/watch?v={video_id}"
+            if 'youtu.be/' in final_url:
+                video_id = final_url.split('youtu.be/')[-1].split('?')[0].split('&')[0]
+                final_url = f"https://www.youtube.com/watch?v={video_id}"
+            # Ensure youtube.com URLs are in full format
+            elif 'youtube.com' in final_url and 'watch?v=' not in final_url:
+                # Handle other YouTube URL formats and convert to standard watch URL
+                if '/embed/' in final_url:
+                    video_id = final_url.split('/embed/')[-1].split('?')[0].split('&')[0]
+                    final_url = f"https://www.youtube.com/watch?v={video_id}"
         
-        # Format for display
+        # Format for display - always return the full URL
         if title:
-            return f"🔗 **{title}**: {expanded_url}"
+            return f"🔗 **{title}**: {final_url}"
         else:
-            return f"🔗 {expanded_url}"
+            return f"🔗 {final_url}"
             
     except Exception:
-        return f"🔗 {url} (validation failed)"
+        # Return original URL if validation fails
+        return f"🔗 {url}"
 
 
 @tool(description="Process uploaded diagnostic files, scan reports, or text files to extract and analyze OBD codes. Use this tool when user mentions they have uploaded a file, attached a diagnostic report, scanner output, or any document containing car diagnostic information. This tool will extract OBD codes from file contents and provide detailed analysis.")
@@ -317,13 +288,13 @@ def search_youtube_car_tutorials(query: str) -> str:
             channel = item['snippet']['channelTitle']
             video_id = item['id']['videoId']
             
-            # Construct full YouTube URL and validate
-            url = f"https://www.youtube.com/watch?v={video_id}"
-            formatted_url = validate_and_format_url(url)
+            # Construct full YouTube URL - ALWAYS use full format, never shortened
+            full_youtube_url = f"https://www.youtube.com/watch?v={video_id}"
             
             description_snippet = item['snippet']['description'][:100] + "..." if item['snippet']['description'] else "No description available"
             
-            video_info = f"**{title_display}**\nChannel: {channel}\n{formatted_url}\nDescription: {description_snippet}\n"
+            # Format video info with full URL guaranteed
+            video_info = f"**{title_display}**\nChannel: {channel}\n🔗 YouTube Link: {full_youtube_url}\nDescription: {description_snippet}\n"
             all_results.append(video_info)
             
             # Check if the video is likely automotive-related
@@ -448,26 +419,33 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
             if lat and lng:
                 # Use direct coordinates URL (most reliable, always full URL)
                 maps_url = f"https://www.google.com/maps/@{lat},{lng},15z"
-                maps_link = validate_and_format_url(maps_url, "View on Google Maps")
+                maps_link = f"🔗 **View on Google Maps**: {maps_url}"
             elif place_id:
                 # Use place_id in search format (avoids shortened URLs)
                 maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
-                maps_link = validate_and_format_url(maps_url, "View on Google Maps")
+                maps_link = f"🔗 **View on Google Maps**: {maps_url}"
             elif address:
                 # Use address search format with proper encoding
                 encoded_address = quote(address)
                 maps_url = f"https://www.google.com/maps/search/{encoded_address}"
-                maps_link = validate_and_format_url(maps_url, "View on Google Maps")
+                maps_link = f"🔗 **View on Google Maps**: {maps_url}"
             else:
                 # Additional fallback: create a direct search URL
                 search_query = f"{name} {location if location else ''}"
                 encoded_query = quote(search_query.strip())
                 maps_url = f"https://www.google.com/maps/search/{encoded_query}"
-                maps_link = validate_and_format_url(maps_url, "Search on Google Maps")
+                maps_link = f"🔗 **Search on Google Maps**: {maps_url}"
             
             result_text += f"**{i+1}. {name}** {status_icon}\n"
-            result_text += f"📍 Address: {address}\n"
-            result_text += f"⭐ Rating: {rating_display}\n"
+            result_text += f"📍 **Full Address**: {address}\n"
+            result_text += f"⭐ **Rating**: {rating_display}\n"
+            
+            # Always include phone number information
+            phone_number = details.get('phone')
+            if phone_number:
+                result_text += f"📞 **Phone**: {phone_number}\n"
+            else:
+                result_text += f"📞 **Phone**: Not available (call directory assistance or check Google Maps)\n"
             
             # Google Maps link should always be available now - Force full URLs
             if maps_link:
@@ -476,21 +454,22 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
                 # Final fallback with direct search URL (never use shortened links)
                 fallback_query = quote(f"{name} auto repair")
                 fallback_url = f"https://www.google.com/maps/search/{fallback_query}"
-                fallback_link = validate_and_format_url(fallback_url, "Search on Google Maps")
-                result_text += f"{fallback_link}\n"
+                result_text += f"🔗 **Search on Google Maps**: {fallback_url}\n"
             
-            if details.get('phone'):
-                result_text += f"📞 Phone: {details['phone']}\n"
+            # Website information
+            website = details.get('website')
+            if website:
+                result_text += f"🌐 **Website**: {website}\n"
             
-            if details.get('website'):
-                result_text += f"🌐 Website: {details['website']}\n"
-            
-            # Fix opening_hours handling
+            # Business hours information
             opening_hours = details.get('opening_hours')
             if opening_hours and isinstance(opening_hours, list) and opening_hours:
-                # Show only today's hours or first available
-                hours_text = opening_hours[0] if opening_hours else "Hours not available"
-                result_text += f"🕒 Hours: {hours_text}\n"
+                # Show first 2 lines of hours (usually current day and next)
+                hours_to_show = opening_hours[:2] if len(opening_hours) >= 2 else opening_hours
+                hours_text = " | ".join(hours_to_show)
+                result_text += f"🕒 **Hours**: {hours_text}\n"
+            else:
+                result_text += f"🕒 **Hours**: Not available (call for current hours)\n"
             
             result_text += "\n"
         
@@ -550,8 +529,13 @@ def search_auto_parts(query: str) -> str:
             # Clean up the snippet (remove extra whitespace and truncate)
             snippet = " ".join(snippet.split())[:150] + "..." if len(snippet) > 150 else snippet
             
-            # Validate and format the URL properly
-            formatted_url = validate_and_format_url(link, "Amazon Link")
+            # Format URL directly without validation to avoid any URL shortening
+            if link:
+                if not link.startswith(('http://', 'https://')):
+                    link = 'https://' + link
+                formatted_url = f"🔗 **Amazon Link**: {link}"
+            else:
+                formatted_url = "🔗 **Amazon Link**: Not available"
             
             parts_list.append(f"**{title}**\n{formatted_url}\n📝 Description: {snippet}\n")
         
@@ -581,7 +565,7 @@ def get_place_details(place_id: str, api_key: str) -> dict:
         api_key: Google Maps API key
         
     Returns:
-        Dictionary with place details
+        Dictionary with place details including phone, website, and hours
     """
     if not place_id or not api_key:
         return {}
@@ -591,10 +575,10 @@ def get_place_details(place_id: str, api_key: str) -> dict:
         params = {
             'place_id': place_id,
             'key': api_key,
-            'fields': 'formatted_phone_number,website,opening_hours'
+            'fields': 'formatted_phone_number,international_phone_number,website,opening_hours,formatted_address,business_status'
         }
         
-        response = requests.get(url, params=params, timeout=5)
+        response = requests.get(url, params=params, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
@@ -605,10 +589,14 @@ def get_place_details(place_id: str, api_key: str) -> dict:
                 opening_hours_data = result.get('opening_hours', {})
                 weekday_text = opening_hours_data.get('weekday_text', []) if isinstance(opening_hours_data, dict) else []
                 
+                # Get the best available phone number
+                phone = result.get('formatted_phone_number') or result.get('international_phone_number')
+                
                 return {
-                    'phone': result.get('formatted_phone_number'),
+                    'phone': phone,
                     'website': result.get('website'),
-                    'opening_hours': weekday_text
+                    'opening_hours': weekday_text,
+                    'business_status': result.get('business_status', 'UNKNOWN')
                 }
         
         return {}
