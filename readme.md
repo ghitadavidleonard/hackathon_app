@@ -1,63 +1,92 @@
 # 🚗 OBD Diagnostic AI Agent
 
-An AI-powered automotive diagnostic agent that can analyze OBD (On-Board Diagnostics)## 🔧 Features
+An AI-powered automotive diagnostic agent that can analyze OBD (On-Board Diagnostics) trouble codes and provide expert automotive assistance. Built for the **IT Perspectives Hackathon 2025** (July 17-18, 2025).
 
-- **📂 File Upload Support**: Upload diagnostic reports, scanner outputs, text files
-- **🔍 Automatic Code Detection**: Finds OBD codes in uploaded files
-- **📋 Structured Analysis**: Complete 5-step diagnostic process
-- **OBD Code Lookup**: Get detailed information about specific diagnostic trouble codes
-- **Code Extraction**: Automatically extract and analyze OBD codes from text
-- **Keyword Search**: Find relevant codes by searching symptoms or keywords
-- **🎥 Video Tutorials**: Find YouTube repair videos for each problem
-- **🗺️ Smart Garage Search**:
-  - Single code: Integrated garage search in analysis
-  - Multiple codes: One consolidated garage search at the end
-- **🛒 Parts Search**: Find replacement parts on Amazon
+## 🔧 Features
+
+### 🎤 **Voice & Text Interaction**
+
+- **OpenAI Realtime API**: Voice-enabled diagnostic conversations
+- **Text Chat Interface**: Traditional text-based interaction via Chainlit
+- **Seamless Mode Switching**: Use voice or text as preferred
+
+### 🔍 **DTC Code Analysis**
+
+- **Automatic Code Detection**: Finds OBD codes in messages and files
+- **Comprehensive Database**: Over 100+ DTC codes with descriptions and causes
+- **Smart Code Lookup**: Detailed information about specific diagnostic trouble codes
+- **Batch Analysis**: Process multiple codes simultaneously
+
+### 📂 **File Upload Support**
+
+- **Diagnostic Reports**: Upload scanner outputs, OBD reports, text files
+- **Multiple Formats**: .txt, .log, .csv, .json, and other text-based files
+- **Automatic Extraction**: Finds and analyzes OBD codes from uploaded content
+- **Real-time Processing**: Instant analysis and feedback
+
+### 🛠️ **Diagnostic Tools**
+
+- **Code Lookup**: Get detailed information about specific codes
+- **Symptom Search**: Find relevant codes by searching symptoms or keywords
+- **Cause Analysis**: Understand what might be causing the problem
+- **Expert Guidance**: Professional automotive diagnostic assistance
+
+### 🌐 **API Integration**
+
+- **FastAPI Backend**: RESTful API for programmatic access
 - **Real-time Streaming**: Get responses as they are generated
+- **Azure OpenAI**: Powered by GPT-4 for intelligent responses
+- **LangChain Integration**: Advanced agent capabilities with tool usage
 
-### 🏪 Intelligent Garage Search Behavior
+## 🏗️ Architecture
 
-When you provide multiple OBD codes and a location, the system optimizes garage searching:
+The application consists of several key components:
 
-- **Multiple codes**: Complete analysis for all codes first, then show nearby garages once at the end
-- **Single code**: Include garage information directly in the diagnostic analysis
-- **No location**: Skip garage search entirelyes and provide expert automotive assistance.
+### 🤖 **AI Agent Architecture**
+
+- **LangGraph Agent**: React-style agent with tool calling capabilities
+- **Azure OpenAI GPT-4**: Advanced language model for intelligent responses
+- **Tool Integration**: Seamlessly integrates OBD diagnostic tools
+- **Supervisor Pattern**: Manages complex multi-step diagnostic workflows
+
+### 🔧 **Core Components**
+
+- **FastAPI Backend** (`agent.py`): RESTful API server
+- **Chainlit Interface** (`chat.py`): Interactive web UI with file upload
+- **OBD Tools** (`obd_tools.py`): Core diagnostic functionality
+- **Agent Tools** (`agent_tools.py`): LangChain tool wrappers
+- **Realtime Module** (`realtime/`): OpenAI Realtime API integration
+
+### 📊 **Data Layer**
+
+- **JSON Database** (`database/obd-codes.json`): OBD trouble codes with descriptions
+- **Code Patterns**: Regex-based code extraction from text
+- **Structured Analysis**: Organized diagnostic information
 
 ## 📁 Project Structure
 
 ```
-├── agent.py                 # Main AI agent with OBD capabilities
-├── chat.py                 # Chainlit chat interface with file upload support
-├── agent_tools.py          # OBD diagnostic tools and handlers
-├── obd_tools.py            # Core OBD functionality
-├── chainlit.md             # Chainlit configuration
-├── config.toml            # Chainlit settings
-├── sample_diagnostic_report.txt  # Example file for testing uploads
+hackathon_app/
+├── agent.py                    # FastAPI backend server
+├── chat.py                     # Chainlit chat interface
+├── agent_tools.py              # LangChain tool wrappers
+├── obd_tools.py                # Core OBD diagnostic functionality
+├── chainlit.md                 # Chainlit app description
+├── requirements.txt            # Python dependencies
+├── .env.example               # Environment configuration template
+├── .chainlit/
+│   ├── config.toml            # Chainlit configuration
+│   └── translations/          # Multi-language support
 ├── database/
-│   └── obd-codes.json     # OBD trouble codes database
-└── requirements.txt       # Python dependencies
+│   └── obd-codes.json         # OBD trouble codes database
+├── realtime/
+│   ├── __init__.py           # Realtime client implementation
+│   └── tools.py              # Realtime-specific tools
+├── agent/                     # Python virtual environment
+└── test-codes.json           # Test data for development
 ```
 
-## ✨ New Features
-
-### 📂 File Upload Support
-
-- **Upload diagnostic reports** - Scanner outputs, OBD reports, text files
-- **Automatic OBD code extraction** - Finds codes like P0301, P0420, B0001, etc.
-- **Intelligent file analysis** - Provides context and suggestions
-- **Supported formats** - .txt, .log, .csv, .json files
-
-### 🔧 Enhanced Diagnostic Process
-
-The agent follows a structured 5-step diagnostic process:
-
-1. **What it means** - Simple explanation of codes/problems
-2. **What might cause it** - List of potential causes
-3. **How to fix it at home** - DIY instructions with video tutorials
-4. **Difficulty level** - BEGINNER/INTERMEDIATE/PROFESSIONAL rating
-5. **Cost & time estimate** - Parts cost, labor cost, repair time
-
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Environment Setup
 
@@ -72,17 +101,17 @@ cp .env.example .env
 # - AZURE_OPENAI_ENDPOINT
 # - AZURE_OPENAI_API_KEY
 # - OPENAI_API_VERSION
-# - YOUTUBE_API_KEY
-# - GOOGLE_MAPS_API_KEY
-# - GOOGLE_SEARCH_API_KEY
-# - GOOGLE_CSE_ID
+# - YOUTUBE_API_KEY (optional)
+# - GOOGLE_MAPS_API_KEY (optional)
 ```
 
-### 2. Create and activate the Virtual Environment
+### 2. Create and Activate Virtual Environment
 
 ```bash
 python -m venv agent
-agent\Scripts\activate
+agent\Scripts\activate  # Windows
+# or
+source agent/bin/activate  # macOS/Linux
 ```
 
 ### 3. Install Dependencies
@@ -93,91 +122,224 @@ pip install -r requirements.txt
 
 ### 4. Run the Application
 
-#### Option A: Web API (Recommended)
-
-```bash
-python agent.py
-```
-
-The agent API will be available at: http://localhost:8005
-
-#### Option B: Chat Interface
+#### Option A: Interactive Chat Interface (Recommended)
 
 ```bash
 chainlit run chat.py
 ```
 
-Interactive chat interface will open in your browser.
+- **Voice Mode**: Click the microphone button for voice conversations
+- **Text Mode**: Type messages normally
+- **File Upload**: Drag and drop diagnostic files
+- **Real-time Responses**: See analysis as it's generated
 
-## � Using File Upload Feature
+#### Option B: API Server
 
-### Supported File Types
+```bash
+python agent.py
+```
 
-- **Text files** (.txt, .log) - Scanner outputs, diagnostic reports
-- **CSV files** (.csv) - Data exports from diagnostic tools
-- **JSON files** (.json) - Structured diagnostic data
-- **Any text-based file** - The system will attempt to read as text
+The API will be available at: `http://localhost:8005`
 
-### How to Upload Files
+## 💡 Usage Examples
 
-1. **Open the Chainlit interface** by running `chainlit run chat.py`
-2. **Click the attachment/file upload button** in the chat interface
-3. **Select your diagnostic file** (use `sample_diagnostic_report.txt` for testing)
-4. **Send the file** - The agent will automatically:
-   - Extract any OBD codes found (P0301, P0420, B0001, etc.)
-   - Provide file analysis and code summary
-   - Follow the complete 5-step diagnostic process for each code
+### 🎙️ Voice Interaction
 
-### Example Usage
+1. **Start the chat interface**: `chainlit run chat.py`
+2. **Click the microphone button** to start voice mode
+3. **Say something like**: "I have a P0301 code on my car"
+4. **Get real-time voice response** with detailed analysis
 
-Try uploading the included `sample_diagnostic_report.txt` file to see the system in action:
+### 💬 Text Chat
 
-- Contains codes: P0301, P0420, P0171, B0001
-- Shows typical diagnostic report format
-- Demonstrates automatic code extraction and analysis
+1. **Type your question**: "What does code P0420 mean?"
+2. **Upload diagnostic files**: Drag and drop scanner outputs
+3. **Get comprehensive analysis**: Causes, solutions, and guidance
 
-## �🔧 Features
+### 📂 File Upload
 
-- **📂 File Upload Support**: Upload diagnostic reports, scanner outputs, text files
-- **🔍 Automatic Code Detection**: Finds OBD codes in uploaded files
-- **📋 Structured Analysis**: Complete 5-step diagnostic process
-- **OBD Code Lookup**: Get detailed information about specific diagnostic trouble codes
-- **Code Extraction**: Automatically extract and analyze OBD codes from text
-- **Keyword Search**: Find relevant codes by searching symptoms or keywords
-- **🎥 Video Tutorials**: Find YouTube repair videos for each problem
-- **🗺️ Local Garages**: Find nearby auto repair shops
-- **🛒 Parts Search**: Find replacement parts on Amazon
-- **Real-time Streaming**: Get responses as they are generated
+1. **Prepare diagnostic files**: Scanner outputs, OBD reports, or text files
+2. **Upload via web interface**: Drag and drop or click upload
+3. **Automatic analysis**: System extracts and analyzes all found codes
 
-## 📚 API Usage
+### 🔌 API Usage
 
 Send POST requests to `/ask` endpoint:
 
-```json
-{
-  "query": "What does P0301 mean?",
-  "history": [{ "role": "user", "content": "What does P0301 mean?" }]
-}
+```bash
+curl -X POST "http://localhost:8005/ask" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What does P0301 mean?",
+    "history": []
+  }'
 ```
 
-## 🛠️ Components
+## 🛠️ Technical Implementation
 
-- **AI Agent**: Azure OpenAI-powered agent with automotive expertise
-- **OBD Tools**: Comprehensive diagnostic trouble code analysis
-- **FastMCP Server**: MCP-compatible server for tool integration
-- **Database**: JSON database with OBD trouble codes and descriptions
+### 🔧 Core Technologies
+
+- **Python 3.8+**: Main programming language
+- **FastAPI**: High-performance web framework
+- **Chainlit**: Interactive chat interface
+- **LangChain**: AI agent framework
+- **LangGraph**: Agent workflow management
+- **Azure OpenAI**: GPT-4 language model
+- **OpenAI Realtime API**: Voice interaction capabilities
+
+### 📊 OBD Code Database
+
+The system includes a comprehensive database of OBD trouble codes:
+
+- **100+ Codes**: P, B, C, and U-series codes
+- **Detailed Descriptions**: What each code means
+- **Common Causes**: Typical reasons for each code
+- **Code Categories**: Powertrain, Body, Chassis, Network codes
+
+### 🎯 Agent Capabilities
+
+- **Code Recognition**: Detects OBD codes in text using regex patterns
+- **Smart Lookup**: Retrieves detailed information from the database
+- **Contextual Analysis**: Provides relevant diagnostic guidance
+- **Multi-modal Input**: Handles both voice and text interactions
+- **File Processing**: Extracts codes from uploaded diagnostic files
+
+## 🔍 Supported OBD Codes
+
+The system recognizes and analyzes various types of diagnostic trouble codes:
+
+- **P-Codes**: Powertrain (engine, transmission)
+- **B-Codes**: Body (lighting, airbags, etc.)
+- **C-Codes**: Chassis (brakes, suspension, etc.)
+- **U-Codes**: Network communication codes
+
+Example codes in the database:
+
+- `P0301`: Cylinder 1 Misfire Detected
+- `P0420`: Catalyst System Efficiency Below Threshold
+- `P0171`: System Too Lean (Bank 1)
+- `B0001`: Various body control module codes
+- And many more...
+
+## 🌟 Key Features in Detail
+
+### 🤖 AI Agent Features
+
+- **Context Awareness**: Remembers conversation history
+- **Tool Integration**: Seamlessly uses diagnostic tools
+- **Streaming Responses**: Real-time response generation
+- **Error Handling**: Graceful handling of unknown codes
+- **Multi-step Analysis**: Complex diagnostic workflows
+
+### 🎤 Voice Features
+
+- **Real-time Processing**: Instant voice-to-text conversion
+- **Natural Conversations**: Speak naturally about car problems
+- **Voice Responses**: Text-to-speech for accessibility
+- **Interrupt Handling**: Can stop and restart conversations
+
+### � Web Interface Features
+
+- **Modern UI**: Clean, responsive design
+- **File Upload**: Drag-and-drop file handling
+- **Progress Indicators**: Visual feedback during processing
+- **Chat History**: Persistent conversation history
+- **Multi-language Support**: Interface translations available
+
+## 🚀 Development
+
+### 🔧 Development Setup
+
+1. **Fork the repository**
+2. **Clone your fork**: `git clone https://github.com/yourusername/hackathon_app.git`
+3. **Create a branch**: `git checkout -b feature/your-feature`
+4. **Set up environment**: Follow the Quick Start guide
+5. **Make changes and test**
+6. **Submit a pull request**
+
+### 🧪 Testing
+
+The project includes test data for development:
+
+- **test-codes.json**: Sample OBD codes for testing
+- **Database validation**: Verify OBD code database integrity
+- **API testing**: Test endpoints with various inputs
+
+### 📝 Contributing
+
+1. **Follow Python PEP 8** style guidelines
+2. **Add docstrings** to new functions
+3. **Update README** for new features
+4. **Test your changes** before submitting
+
+## 🎯 Hackathon Project
+
+This project was created for the **IT Perspectives Hackathon 2025** (July 17-18, 2025) with the theme "Let the Code Explode!"
+
+### 🏆 Project Goals
+
+- **Demonstrate AI Integration**: Show practical AI applications in automotive diagnostics
+- **Voice Interface Innovation**: Implement cutting-edge voice interaction capabilities
+- **Real-world Problem Solving**: Address actual automotive diagnostic challenges
+- **Technical Excellence**: Showcase advanced software architecture and best practices
+
+### 💡 Innovation Highlights
+
+- **Multi-modal AI**: Combines voice, text, and file processing
+- **Real-time Processing**: Instant response generation and streaming
+- **Comprehensive Database**: Extensive OBD code coverage
+- **User-friendly Interface**: Intuitive design for technical and non-technical users
+
+## 📞 Support & Contact
+
+For questions, issues, or contributions:
+
+- **GitHub Issues**: Report bugs and request features
+- **Pull Requests**: Contribute code improvements
+- **Documentation**: Help improve the README and docs
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **API Key Errors**: Ensure all required API keys are set in `.env`
+2. **Import Errors**: Verify virtual environment is activated
+3. **Port Conflicts**: Check that ports 8005 and 8000 are available
+4. **File Upload Issues**: Ensure file permissions are correct
+
+### Debug Mode
+
+Enable debug logging by setting environment variable:
+
+```bash
+export CHAINLIT_DEBUG=true
+```
+
+## 🌟 Future Enhancements
+
+### Planned Features
+
+- **Real-time Vehicle Data**: Integration with live OBD-II scanners
+- **Advanced Diagnostics**: ML-based fault prediction
+- **Mobile App**: Native mobile application
+- **Extended Database**: More comprehensive code coverage
+- **Multi-language Support**: Additional language translations
+
+### Technical Improvements
+
+- **Performance Optimization**: Faster response times
+- **Caching Layer**: Improved data retrieval
+- **Database Migration**: Move to production database
+- **API Versioning**: Backwards compatibility support
 
 ---
 
-## Quick Start Commands
+## 🎉 Acknowledgments
 
-```bash
-# To activate environment
-agent\Scripts\activate
-# To install dependencies
-pip install -r .\requirements.txt
-# Run the API
-python .\agent.py
-# Run the UI
-chainlit run .\chat.py
-```
+**IT Perspectives Hackathon 2025** - "Let the Code Explode!" 🚀
+
+Built with ❤️ for the automotive diagnostic community.
+
+---
+
+_This project demonstrates the power of AI in solving real-world automotive problems through innovative voice and text interfaces._

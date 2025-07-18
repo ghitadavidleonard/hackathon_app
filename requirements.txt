@@ -13,3 +13,7 @@ langgraph
 langgraph-supervisor
 google-api-python-client
 python-dotenv
+yfinance
+plotly
+websockets==14.1
+numpy
