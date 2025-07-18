@@ -323,6 +323,66 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
         return f"**❌ Error finding garages**: {str(e)}\n\n**I was unable to search for nearby auto repair shops** due to an error. Please try:\n• Searching Google Maps directly for 'auto repair near {location}'\n• Using a different location format\n• Checking your internet connection\n• Trying again later"
 
 
+@tool(description="Search for replacement auto parts on Amazon for specific OBD codes or car components. Use this tool when user needs to find replacement parts after diagnosing a problem, asks 'where can I buy parts?', mentions needing to replace a component, or wants to see part prices for DIY repairs. This helps complete the repair process by finding the actual parts needed.")
+def search_auto_parts(query: str) -> str:
+    """Search for replacement auto parts on Amazon for specific OBD codes or car components."""
+    try:
+        # Get Google Custom Search API credentials
+        api_key = os.environ.get("GOOGLE_SEARCH_API_KEY")
+        cse_id = os.environ.get("GOOGLE_CSE_ID")
+        
+        if not api_key or not cse_id:
+            return "**❌ Parts search not configured**\n\nGoogle Custom Search API credentials not available. Please try:\n• Searching Amazon directly for replacement parts\n• Using the specific part names I mentioned in the diagnosis\n• Consulting your local auto parts store"
+        
+        # Enhanced search query to focus on replacement parts
+        search_query = f"{query} replacement part automotive site:amazon.com"
+        
+        url = "https://www.googleapis.com/customsearch/v1"
+        params = {
+            "key": api_key,
+            "cx": cse_id,
+            "q": search_query,
+            "num": 5,  # number of results to return
+        }
+
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code != 200:
+            return f"**❌ Error accessing parts search**: Status code {response.status_code}\n\n**I was unable to search for replacement parts** due to an API error. Please try searching Amazon directly for the part names mentioned in the diagnosis."
+        
+        results = response.json()
+        
+        if not results.get("items"):
+            return f"**❌ No replacement parts found for: {query}**\n\n**I could not find specific parts on Amazon** for this component. You may want to:\n• Search manually on Amazon with more specific part numbers\n• Check your vehicle's manual for exact part specifications\n• Visit your local auto parts store (AutoZone, O'Reilly, etc.)\n• Contact your car dealer for OEM parts"
+        
+        parts_list = []
+        for item in results.get("items", []):
+            title = item.get("title", "Unknown")
+            link = item.get("link", "")
+            snippet = item.get("snippet", "No description available")
+            
+            # Clean up the snippet (remove extra whitespace and truncate)
+            snippet = " ".join(snippet.split())[:150] + "..." if len(snippet) > 150 else snippet
+            
+            parts_list.append(f"**{title}**\n🔗 Link: {link}\n📝 Description: {snippet}\n")
+        
+        parts_text = f"🛒 **REPLACEMENT PARTS FOUND FOR: {query}**\n\n"
+        parts_text += f"Found {len(parts_list)} replacement parts on Amazon:\n\n"
+        parts_text += "\n".join(parts_list)
+        
+        parts_text += "\n**💡 Parts Shopping Tips:**\n"
+        parts_text += "• Verify part compatibility with your specific vehicle year/make/model\n"
+        parts_text += "• Check seller ratings and reviews before purchasing\n"
+        parts_text += "• Compare prices across multiple sellers\n"
+        parts_text += "• Consider OEM vs aftermarket options\n"
+        parts_text += "• Read return policy before ordering"
+        
+        return parts_text
+        
+    except Exception as e:
+        return f"**❌ Error searching for replacement parts**: {str(e)}\n\n**I was unable to search for parts** due to an error. Please try:\n• Searching Amazon directly for the component names\n• Visiting your local auto parts store\n• Checking your vehicle manual for part numbers\n• Trying again later"
+
+
 def get_place_details(place_id: str, api_key: str) -> dict:
     """
     Get detailed information about a specific place using Google Places API.
@@ -393,7 +453,8 @@ OBD_TOOLS = [
     list_available_obd_codes,
     get_obd_code_categories,
     search_youtube_car_tutorials,
-    find_nearby_garages
+    find_nearby_garages,
+    search_auto_parts
 ]
 
 # Keep the non-tool functions for direct access
@@ -422,6 +483,7 @@ AVAILABLE_FUNCTIONS = {
     "get_obd_code_categories": get_obd_code_categories.func,
     "search_youtube_car_tutorials": search_youtube_car_tutorials.func,
     "find_nearby_garages": find_nearby_garages.func,
+    "search_auto_parts": search_auto_parts.func,
     "get_place_details": get_place_details,
     "detect_obd_codes_in_message": detect_obd_codes_in_message
 }
