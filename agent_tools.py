@@ -7,7 +7,10 @@ The agent can use these tools to provide automotive assistance.
 
 import os
 import re
+import json
 import requests
+from typing import Optional
+from urllib.parse import quote, unquote
 from langchain.tools import tool
 from obd_tools import OBDCodeHandler
 from googleapiclient.discovery import build
@@ -15,6 +18,168 @@ from googleapiclient.discovery import build
 
 # Create a single instance to reuse
 _obd_handler = OBDCodeHandler()
+
+
+def expand_shortened_url(url: str) -> str:
+    """
+    Expand shortened URLs and validate they work properly.
+    
+    Args:
+        url: URL that might be shortened
+        
+    Returns:
+        Expanded URL or original URL if expansion fails
+    """
+    if not url:
+        return url
+        
+    try:
+        # Check if URL looks like it might be shortened
+        shortened_patterns = [
+            'youtu.be/', 'bit.ly/', 'tinyurl.com/', 'goo.gl/',
+            't.co/', 'ow.ly/', 'is.gd/', 'buff.ly/'
+        ]
+        
+        is_shortened = any(pattern in url.lower() for pattern in shortened_patterns)
+        
+        if is_shortened or len(url) < 50:  # Very short URLs might be shortened
+            # Try to expand by following redirects
+            response = requests.head(url, allow_redirects=True, timeout=5)
+            if response.status_code < 400:
+                expanded_url = response.url
+                return expanded_url
+        
+        return url
+        
+    except Exception:
+        # If expansion fails, return original URL
+        return url
+
+
+def validate_and_format_url(url: str, title: str = "") -> str:
+    """
+    Validate URL and format it properly for display.
+    
+    Args:
+        url: URL to validate and format
+        title: Optional title for the link
+        
+    Returns:
+        Formatted URL string
+    """
+    if not url:
+        return "❌ No URL available"
+    
+    try:
+        # Expand if shortened
+        expanded_url = expand_shortened_url(url)
+        
+        # Ensure URL has proper protocol
+        if not expanded_url.startswith(('http://', 'https://')):
+            expanded_url = 'https://' + expanded_url
+        
+        # Special handling for YouTube URLs to ensure they're full
+        if 'youtube.com' in expanded_url or 'youtu.be' in expanded_url:
+            # Convert youtu.be to full youtube.com format
+            if 'youtu.be/' in expanded_url:
+                video_id = expanded_url.split('youtu.be/')[-1].split('?')[0]
+                expanded_url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        # Format for display
+        if title:
+            return f"🔗 **{title}**: {expanded_url}"
+        else:
+            return f"🔗 {expanded_url}"
+            
+    except Exception:
+        return f"🔗 {url} (validation failed)"
+
+
+@tool(description="Process uploaded diagnostic files, scan reports, or text files to extract and analyze OBD codes. Use this tool when user mentions they have uploaded a file, attached a diagnostic report, scanner output, or any document containing car diagnostic information. This tool will extract OBD codes from file contents and provide detailed analysis.")
+def process_diagnostic_file(file_content: str, file_name: str = "uploaded_file") -> str:
+    """Process uploaded diagnostic files to extract and analyze OBD codes."""
+    if not file_content.strip():
+        return "The uploaded file appears to be empty or unreadable."
+    
+    # Extract OBD codes from the file content
+    pattern = r'\b[PBCU]\d{4}\b'
+    found_codes = re.findall(pattern, file_content.upper())
+    found_codes = list(set(found_codes))  # Remove duplicates
+    
+    if not found_codes:
+        # Check for common diagnostic keywords even if no codes found
+        diagnostic_keywords = [
+            'engine', 'transmission', 'abs', 'airbag', 'check engine', 'malfunction',
+            'error', 'fault', 'trouble', 'diagnostic', 'scanner', 'obd', 'dtc'
+        ]
+        
+        found_keywords = [kw for kw in diagnostic_keywords if kw.lower() in file_content.lower()]
+        
+        if found_keywords:
+            return f"""📁 **File Analysis Results for {file_name}:**
+
+❌ **No OBD codes found** in the uploaded file, but detected automotive-related content.
+
+**Keywords found:** {', '.join(found_keywords)}
+
+**File content preview:**
+```
+{file_content[:800]}{'...' if len(file_content) > 800 else ''}
+```
+
+**Suggestions:**
+• If this is a diagnostic report, the codes might be in a different format
+• Try uploading a text file or CSV export from your scanner
+• You can also tell me the codes directly (e.g., "I have codes P0301 and P0420")
+"""
+        else:
+            return f"""📁 **File Analysis Results for {file_name}:**
+
+❌ **No OBD codes or automotive content detected** in this file.
+
+**File content preview:**
+```
+{file_content[:500]}{'...' if len(file_content) > 500 else ''}
+```
+
+**This appears to be a non-automotive file. Please upload:**
+• OBD scanner reports
+• Diagnostic trouble code lists  
+• Car diagnostic text files
+• Or simply tell me your trouble codes directly"""
+    
+    # Analyze found codes using existing OBD handler
+    analysis_result = f"""📁 **File Analysis Results for {file_name}:**
+
+✅ **Found {len(found_codes)} OBD diagnostic codes:** {', '.join(found_codes)}
+
+**Detailed Analysis:**
+"""
+    
+    # Get detailed analysis for each code
+    for code in found_codes:
+        code_info = _obd_handler.lookup_obd_code(code)
+        if code_info.get("found", False):
+            analysis_result += f"""
+**{code}:** {code_info['description']}
+• **Possible causes:** {', '.join(code_info['causes'])}
+"""
+        else:
+            analysis_result += f"""
+**{code}:** Code not found in database (may be manufacturer-specific)
+"""
+    
+    analysis_result += f"""
+
+**File content preview:**
+```
+{file_content[:400]}{'...' if len(file_content) > 400 else ''}
+```
+
+**Next Steps:**
+I'll now provide a complete diagnostic analysis following my 5-step process for each code found."""
+    
+    return analysis_result
 
 
 @tool(description="Look up detailed information about a specific OBD diagnostic trouble code. Use this tool when user provides a single specific OBD code (like P0301, P0420, B0001, etc.), you need detailed information about one particular code, or user asks 'What does code P0301 mean?'")
@@ -151,10 +316,14 @@ def search_youtube_car_tutorials(query: str) -> str:
             title_display = item['snippet']['title']
             channel = item['snippet']['channelTitle']
             video_id = item['id']['videoId']
+            
+            # Construct full YouTube URL and validate
             url = f"https://www.youtube.com/watch?v={video_id}"
+            formatted_url = validate_and_format_url(url)
+            
             description_snippet = item['snippet']['description'][:100] + "..." if item['snippet']['description'] else "No description available"
             
-            video_info = f"**{title_display}**\nChannel: {channel}\nURL: {url}\nDescription: {description_snippet}\n"
+            video_info = f"**{title_display}**\nChannel: {channel}\n{formatted_url}\nDescription: {description_snippet}\n"
             all_results.append(video_info)
             
             # Check if the video is likely automotive-related
@@ -278,22 +447,23 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
             # Force full Google Maps URLs (avoid shortened goo.gl links)
             if lat and lng:
                 # Use direct coordinates URL (most reliable, always full URL)
-                maps_link = f"https://www.google.com/maps/@{lat},{lng},15z"
+                maps_url = f"https://www.google.com/maps/@{lat},{lng},15z"
+                maps_link = validate_and_format_url(maps_url, "View on Google Maps")
             elif place_id:
                 # Use place_id in search format (avoids shortened URLs)
-                maps_link = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+                maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+                maps_link = validate_and_format_url(maps_url, "View on Google Maps")
             elif address:
                 # Use address search format with proper encoding
-                import urllib.parse
-                encoded_address = urllib.parse.quote_plus(address)
-                maps_link = f"https://www.google.com/maps/search/{encoded_address}"
-            
-            # Additional fallback: create a direct search URL
-            if not maps_link and name:
-                import urllib.parse
+                encoded_address = quote(address)
+                maps_url = f"https://www.google.com/maps/search/{encoded_address}"
+                maps_link = validate_and_format_url(maps_url, "View on Google Maps")
+            else:
+                # Additional fallback: create a direct search URL
                 search_query = f"{name} {location if location else ''}"
-                encoded_query = urllib.parse.quote_plus(search_query.strip())
-                maps_link = f"https://www.google.com/maps/search/{encoded_query}"
+                encoded_query = quote(search_query.strip())
+                maps_url = f"https://www.google.com/maps/search/{encoded_query}"
+                maps_link = validate_and_format_url(maps_url, "Search on Google Maps")
             
             result_text += f"**{i+1}. {name}** {status_icon}\n"
             result_text += f"📍 Address: {address}\n"
@@ -301,13 +471,13 @@ Example: "Find garages near 12345" or "Find garages in New York, NY"
             
             # Google Maps link should always be available now - Force full URLs
             if maps_link:
-                result_text += f"🗺️ Google Maps: {maps_link}\n"
+                result_text += f"{maps_link}\n"
             else:
                 # Final fallback with direct search URL (never use shortened links)
-                import urllib.parse
-                fallback_query = urllib.parse.quote_plus(f"{name} auto repair")
-                fallback_link = f"https://www.google.com/maps/search/{fallback_query}"
-                result_text += f"🗺️ Google Maps: {fallback_link}\n"
+                fallback_query = quote(f"{name} auto repair")
+                fallback_url = f"https://www.google.com/maps/search/{fallback_query}"
+                fallback_link = validate_and_format_url(fallback_url, "Search on Google Maps")
+                result_text += f"{fallback_link}\n"
             
             if details.get('phone'):
                 result_text += f"📞 Phone: {details['phone']}\n"
@@ -380,7 +550,10 @@ def search_auto_parts(query: str) -> str:
             # Clean up the snippet (remove extra whitespace and truncate)
             snippet = " ".join(snippet.split())[:150] + "..." if len(snippet) > 150 else snippet
             
-            parts_list.append(f"**{title}**\n🔗 Link: {link}\n📝 Description: {snippet}\n")
+            # Validate and format the URL properly
+            formatted_url = validate_and_format_url(link, "Amazon Link")
+            
+            parts_list.append(f"**{title}**\n{formatted_url}\n📝 Description: {snippet}\n")
         
         parts_text = f"🛒 **REPLACEMENT PARTS FOUND FOR: {query}**\n\n"
         parts_text += f"Found {len(parts_list)} replacement parts on Amazon:\n\n"
@@ -463,6 +636,7 @@ def detect_obd_codes_in_message(message: str) -> bool:
 
 # List of tools for the agent to use
 OBD_TOOLS = [
+    process_diagnostic_file,
     lookup_obd_code,
     extract_and_analyze_obd_codes,
     search_obd_codes_by_keyword,
@@ -492,6 +666,7 @@ def detect_obd_codes_in_message(message: str) -> bool:
 
 # Backward compatibility - keep AVAILABLE_FUNCTIONS for any direct function calls
 AVAILABLE_FUNCTIONS = {
+    "process_diagnostic_file": process_diagnostic_file.func,
     "lookup_obd_code": lookup_obd_code.func,
     "extract_and_analyze_obd_codes": extract_and_analyze_obd_codes.func,
     "search_obd_codes_by_keyword": search_obd_codes_by_keyword.func,

@@ -1,0 +1,26 @@
+{
+  "P0100": {
+    "description": "Mass or Volume Air Flow Circuit Malfunction",
+    "causes": ["Faulty MAF sensor", "Wiring issues", "Air filter blockage"]
+  },
+  "P0101": {
+    "description": "Mass or Volume Air Flow Circuit Range/Performance Problem",
+    "causes": ["Dirty MAF sensor", "Intake leak", "Faulty wiring"]
+  },
+  "P0102": {
+    "description": "Mass or Volume Air Flow Circuit Low Input",
+    "causes": ["Low air flow", "Vacuum leak", "Faulty MAF sensor"]
+  },
+  "P0110": {
+    "description": "Intake Air Temperature Sensor Circuit Malfunction",
+    "causes": ["Faulty IAT sensor", "Wiring short", "Corroded connector"]
+  },
+  "P0113": {
+    "description": "Intake Air Temperature Sensor 1 Circuit High Input",
+    "causes": ["Disconnected sensor", "Open circuit", "Faulty sensor"]
+  },
+  "P0120": {
+    "description": "Throttle/Pedal Position Sensor A Circuit Malfunction",
+    "causes": ["Faulty throttle body", "Wiring issue", "Bad TPS sensor"]
+  }
+}
